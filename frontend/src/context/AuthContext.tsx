@@ -9,46 +9,50 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
+  setMockSession: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('projectflow_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem('projectflow_token'));
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Check active Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        setToken(session.access_token);
-        setUser({
+        const u: User = {
           id: session.user.id,
           fullName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
           email: session.user.email || '',
           role: (session.user.user_metadata?.role as any) || 'USER',
           createdAt: session.user.created_at,
-        });
+        };
+        setToken(session.access_token);
+        setUser(u);
+        localStorage.setItem('projectflow_user', JSON.stringify(u));
+        localStorage.setItem('projectflow_token', session.access_token);
       }
-      setIsLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
-        setToken(session.access_token);
-        setUser({
+        const u: User = {
           id: session.user.id,
           fullName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
           email: session.user.email || '',
           role: (session.user.user_metadata?.role as any) || 'USER',
           createdAt: session.user.created_at,
-        });
-      } else {
-        setToken(null);
-        setUser(null);
+        };
+        setToken(session.access_token);
+        setUser(u);
+        localStorage.setItem('projectflow_user', JSON.stringify(u));
+        localStorage.setItem('projectflow_token', session.access_token);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -57,20 +61,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = (newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
+    localStorage.setItem('projectflow_user', JSON.stringify(newUser));
+    localStorage.setItem('projectflow_token', newToken);
+  };
+
+  const setMockSession = (mockUser: User) => {
+    setUser(mockUser);
+    setToken(`demo-token-${mockUser.role.toLowerCase()}`);
+    localStorage.setItem('projectflow_user', JSON.stringify(mockUser));
+    localStorage.setItem('projectflow_token', `demo-token-${mockUser.role.toLowerCase()}`);
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setToken(null);
-    setUser(null);
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Ignore
+    } finally {
+      setToken(null);
+      setUser(null);
+      localStorage.removeItem('projectflow_user');
+      localStorage.removeItem('projectflow_token');
+    }
   };
 
   const updateUser = (updatedUser: User) => {
     setUser(updatedUser);
+    localStorage.setItem('projectflow_user', JSON.stringify(updatedUser));
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, updateUser, setMockSession }}>
       {children}
     </AuthContext.Provider>
   );

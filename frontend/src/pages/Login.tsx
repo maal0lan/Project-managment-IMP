@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, Lock, Mail, AlertCircle, Loader2, User, ShieldCheck } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { setMockSession } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,15 +37,68 @@ export const Login: React.FC = () => {
     }
   };
 
+  // Instant 1-Click Demo Logins
+  const handleQuickLogin = (role: 'USER' | 'ADMIN') => {
+    if (role === 'USER') {
+      setMockSession({
+        id: 'demo-user-alice-uuid',
+        fullName: 'Alice Johnson',
+        email: 'alice@projectflow.com',
+        role: 'USER',
+        createdAt: new Date().toISOString(),
+      });
+    } else {
+      setMockSession({
+        id: 'demo-admin-sarah-uuid',
+        fullName: 'Sarah Administrator',
+        email: 'admin@projectflow.com',
+        role: 'ADMIN',
+        createdAt: new Date().toISOString(),
+      });
+    }
+    navigate('/');
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-slate-100">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white mb-3 shadow-lg shadow-indigo-600/30">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
-          <p className="text-sm text-slate-500 mt-1">Sign in with Supabase to manage projects</p>
+          <p className="text-sm text-slate-500 mt-1">Sign in to manage projects & tasks</p>
+        </div>
+
+        {/* 1-CLICK INSTANT DEMO LOGIN BUTTONS */}
+        <div className="mb-6 p-4 bg-indigo-50/70 border border-indigo-100 rounded-xl">
+          <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider text-center mb-3">
+            Instant 1-Click Demo Login
+          </p>
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('USER')}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold shadow-xs hover:border-indigo-300 transition"
+            >
+              <User className="w-4 h-4 text-indigo-600" />
+              <span>Normal User</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleQuickLogin('ADMIN')}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition"
+            >
+              <ShieldCheck className="w-4 h-4 text-white" />
+              <span>Admin User</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="relative flex py-2 items-center mb-5">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink mx-3 text-xs text-slate-400 font-medium">or with email & password</span>
+          <div className="flex-grow border-t border-slate-200"></div>
         </div>
 
         {error && (
@@ -91,7 +146,7 @@ export const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm hover:shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-lg shadow-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {isLoading ? 'Signing in...' : 'Sign In'}
