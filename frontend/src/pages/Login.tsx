@@ -70,29 +70,19 @@ export const Login: React.FC = () => {
           <p className="text-sm text-slate-500 mt-1">Sign in to manage projects & tasks</p>
         </div>
 
-        {/* 1-CLICK INSTANT DEMO LOGIN BUTTONS */}
-        <div className="mb-6 p-4 bg-indigo-50/70 border border-indigo-100 rounded-xl">
-          <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider text-center mb-3">
-            Instant 1-Click Demo Login
+        {/* 1-CLICK INSTANT DEMO LOGIN BUTTON */}
+        <div className="mb-6 p-4 bg-indigo-50/80 border border-indigo-100 rounded-xl text-center">
+          <p className="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-2.5">
+            Quick Demo Access
           </p>
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('USER')}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 rounded-lg text-xs font-bold shadow-xs hover:border-indigo-300 transition"
-            >
-              <User className="w-4 h-4 text-indigo-600" />
-              <span>Normal User</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('ADMIN')}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs transition"
-            >
-              <ShieldCheck className="w-4 h-4 text-white" />
-              <span>Admin User</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleQuickLogin('USER')}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-bold shadow-sm transition"
+          >
+            <User className="w-4 h-4 text-white" />
+            <span>Login as Normal User</span>
+          </button>
         </div>
 
         <div className="relative flex py-2 items-center mb-5">
