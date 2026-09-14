@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Lock, Mail, AlertCircle, Loader2 } from 'lucide-react';
-import api from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Client-side validation
     if (!email.trim() || !password) {
       setError('Please fill in all required fields.');
       return;
@@ -24,31 +21,15 @@ export const Login: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/login', { email, password });
-      login(res.data.data.token, res.data.data.user);
-      navigate('/');
-    } catch (err: any) {
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0]?.message ||
-        'Failed to log in. Please verify your credentials.';
-      setError(msg);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
 
-  const handleDemoLogin = async (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await api.post('/auth/login', { email: demoEmail, password: demoPass });
-      login(res.data.data.token, res.data.data.user);
+      if (authError) throw authError;
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Demo login failed');
+      setError(err.message || 'Failed to log in. Please verify your credentials.');
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +43,7 @@ export const Login: React.FC = () => {
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Welcome Back</h1>
-          <p className="text-sm text-slate-500 mt-1">Sign in to manage your projects & tasks</p>
+          <p className="text-sm text-slate-500 mt-1">Sign in with Supabase to manage projects</p>
         </div>
 
         {error && (
@@ -116,29 +97,6 @@ export const Login: React.FC = () => {
             {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Demo Credentials Helper */}
-        <div className="mt-6 pt-5 border-t border-slate-100">
-          <p className="text-xs font-medium text-slate-500 text-center mb-3">
-            Quick Fill Demo Accounts:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('alice@example.com', 'Password123!')}
-              className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium transition"
-            >
-              Demo User (Alice)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDemoLogin('admin@example.com', 'AdminPass123!')}
-              className="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded text-xs font-medium transition"
-            >
-              Admin (Sarah)
-            </button>
-          </div>
-        </div>
 
         <p className="text-center text-xs text-slate-500 mt-6">
           Don't have an account?{' '}

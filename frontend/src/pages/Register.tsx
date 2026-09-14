@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Lock, Mail, User, AlertCircle, Loader2 } from 'lucide-react';
-import api from '../api/client';
-import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 
 export const Register: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -11,14 +10,12 @@ export const Register: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    // Client-side validations
     if (!fullName.trim() || !email.trim() || !password) {
       setError('All fields are required.');
       return;
@@ -36,20 +33,21 @@ export const Register: React.FC = () => {
 
     setIsLoading(true);
     try {
-      const res = await api.post('/auth/register', {
-        fullName: fullName.trim(),
+      const { error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            role: 'USER',
+          },
+        },
       });
 
-      login(res.data.data.token, res.data.data.user);
+      if (authError) throw authError;
       navigate('/');
     } catch (err: any) {
-      const msg =
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0]?.message ||
-        'Registration failed. Please try again.';
-      setError(msg);
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

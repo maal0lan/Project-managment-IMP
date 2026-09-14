@@ -1,4 +1,5 @@
 import app from './app';
+import { ensureDemoAccounts } from './bootstrap';
 import { config } from './config';
 import prisma from './config/prisma';
 
@@ -7,6 +8,7 @@ const startServer = async () => {
     // Verify database connection
     await prisma.$connect();
     console.log('Successfully connected to PostgreSQL database via Prisma.');
+    await ensureDemoAccounts();
 
     app.listen(config.port, () => {
       console.log(`Server listening on port ${config.port} in ${config.nodeEnv} mode`);
