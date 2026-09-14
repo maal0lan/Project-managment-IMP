@@ -1,0 +1,348 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Project Management System API",
+    "version": "1.0.0",
+    "description": "Comprehensive REST API for User Authentication, Project Tracking, and Task Management."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Local Development Server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Provide your JWT token obtained from /api/auth/login or /api/auth/register"
+      }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "fullName": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["USER", "ADMIN"] },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] },
+          "startDate": { "type": "string", "format": "date-time", "nullable": true },
+          "endDate": { "type": "string", "format": "date-time", "nullable": true },
+          "userId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+          "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED"] },
+          "dueDate": { "type": "string", "format": "date-time", "nullable": true },
+          "projectId": { "type": "string", "format": "uuid" },
+          "userId": { "type": "string", "format": "uuid" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean", "example": false },
+          "message": { "type": "string" },
+          "errors": { "type": "array", "items": { "type": "object" } }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register a new user",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["fullName", "email", "password"],
+                "properties": {
+                  "fullName": { "type": "string", "example": "John Doe" },
+                  "email": { "type": "string", "format": "email", "example": "john@example.com" },
+                  "password": { "type": "string", "format": "password", "example": "SecurePassword123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User successfully registered" },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Authenticate user and obtain JWT token",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "john@example.com" },
+                  "password": { "type": "string", "format": "password", "example": "SecurePassword123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "summary": "Logout user",
+        "tags": ["Authentication"],
+        "responses": {
+          "200": { "description": "Logged out successfully" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "Get currently logged in user profile",
+        "tags": ["Authentication"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "User profile" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "List user's projects with filtering, search & pagination",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" }, "description": "Search by project name" },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] }, "description": "Filter by project status" },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } },
+          { "name": "sortBy", "in": "query", "schema": { "type": "string", "default": "createdAt" } },
+          { "name": "sortOrder", "in": "query", "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" } }
+        ],
+        "responses": {
+          "200": { "description": "List of projects with pagination metadata" }
+        }
+      },
+      "post": {
+        "summary": "Create a new project",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name"],
+                "properties": {
+                  "name": { "type": "string", "example": "Website Redesign" },
+                  "description": { "type": "string", "example": "Redesign corporate portal" },
+                  "status": { "type": "string", "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"], "default": "NOT_STARTED" },
+                  "startDate": { "type": "string", "format": "date-time" },
+                  "endDate": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Project created successfully" }
+        }
+      }
+    },
+    "/api/projects/{id}": {
+      "get": {
+        "summary": "Get project details by ID with associated tasks",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Project details" },
+          "404": { "description": "Project not found" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "put": {
+        "summary": "Update an existing project",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "status": { "type": "string", "enum": ["NOT_STARTED", "IN_PROGRESS", "COMPLETED"] },
+                  "startDate": { "type": "string", "format": "date-time" },
+                  "endDate": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Project updated successfully" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a project and all associated tasks",
+        "tags": ["Projects"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Project deleted successfully" }
+        }
+      }
+    },
+    "/api/tasks": {
+      "get": {
+        "summary": "List tasks with search, filters (status, priority, project) & pagination",
+        "tags": ["Tasks"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED"] } },
+          { "name": "priority", "in": "query", "schema": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] } },
+          { "name": "projectId", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 } }
+        ],
+        "responses": {
+          "200": { "description": "List of tasks" }
+        }
+      },
+      "post": {
+        "summary": "Create a new task under a project",
+        "tags": ["Tasks"],
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "projectId"],
+                "properties": {
+                  "name": { "type": "string", "example": "Implement JWT Auth" },
+                  "description": { "type": "string" },
+                  "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"], "default": "MEDIUM" },
+                  "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED"], "default": "PENDING" },
+                  "dueDate": { "type": "string", "format": "date-time" },
+                  "projectId": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Task created successfully" }
+        }
+      }
+    },
+    "/api/tasks/{id}": {
+      "get": {
+        "summary": "Get task details by ID",
+        "tags": ["Tasks"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Task details" }
+        }
+      },
+      "put": {
+        "summary": "Update an existing task",
+        "tags": ["Tasks"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "description": { "type": "string" },
+                  "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+                  "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED"] },
+                  "dueDate": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Task updated successfully" }
+        }
+      },
+      "delete": {
+        "summary": "Delete a task",
+        "tags": ["Tasks"],
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Task deleted successfully" }
+        }
+      }
+    },
+    "/api/dashboard/stats": {
+      "get": {
+        "summary": "Get aggregated statistics for user dashboard",
+        "tags": ["Dashboard"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Dashboard statistics" }
+        }
+      }
+    },
+    "/api/audit-logs": {
+      "get": {
+        "summary": "Get user activity audit trail",
+        "tags": ["Audit"],
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "List of user actions" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: projectflow_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: project_management
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d project_management"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Express Backend REST API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: projectflow_backend
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: "postgresql://postgres:root@postgres:5432/project_management?schema=public"
+      JWT_SECRET: "supersecretjwtkey_for_project_management_system_2026!"
+      JWT_EXPIRES_IN: "7d"
+      CLIENT_URL: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # React Frontend (Nginx SPA)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: projectflow_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
