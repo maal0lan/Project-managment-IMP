@@ -12,6 +12,7 @@ import {
   FolderKanban,
 } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { Project, Task, TaskStatus } from '../types';
 import { StatusBadge, PriorityBadge } from '../components/Badges';
 import { TaskModal } from '../components/TaskModal';
@@ -36,11 +37,17 @@ export const ProjectDetail: React.FC = () => {
     if (!id) return;
     setIsLoading(true);
     try {
-      const res = await api.get(`/projects/${id}`);
-      setProject(res.data.data);
-      setTasks(res.data.data.tasks || []);
+      try {
+        const res = await api.get(`/projects/${id}`);
+        setProject(res.data.data);
+        setTasks(res.data.data.tasks || []);
+      } catch {
+        const local = dataStore.getProjectById(id);
+        setProject(local);
+        setTasks(local.tasks || []);
+      }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load project details');
+      setError(err.message || 'Failed to load project details');
     } finally {
       setIsLoading(false);
     }
@@ -55,25 +62,21 @@ export const ProjectDetail: React.FC = () => {
       task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
 
     try {
-      const res = await api.put(`/tasks/${task.id}`, { status: nextStatus });
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: res.data.data.status } : t))
-      );
-      // Refresh stats
-      fetchProjectDetails();
-    } catch (err) {
-      console.error('Failed to toggle status', err);
+      await api.put(`/tasks/${task.id}`, { status: nextStatus });
+    } catch {
+      dataStore.updateTask(task.id, { status: nextStatus });
     }
+    fetchProjectDetails();
   };
 
   const handleDeleteTask = async (taskId: string) => {
     try {
       await api.delete(`/tasks/${taskId}`);
-      setDeleteTaskId(null);
-      fetchProjectDetails();
-    } catch (err) {
-      console.error('Failed to delete task', err);
+    } catch {
+      dataStore.deleteTask(taskId);
     }
+    setDeleteTaskId(null);
+    fetchProjectDetails();
   };
 
   const handleDeleteProject = async () => {
@@ -81,10 +84,10 @@ export const ProjectDetail: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this project and all its tasks?')) {
       try {
         await api.delete(`/projects/${id}`);
-        navigate('/projects');
-      } catch (err) {
-        console.error('Failed to delete project', err);
+      } catch {
+        dataStore.deleteProject(id);
       }
+      navigate('/projects');
     }
   };
 

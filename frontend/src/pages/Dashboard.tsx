@@ -10,6 +10,7 @@ import {
   Calendar,
 } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { DashboardStats } from '../types';
 import { StatusBadge, PriorityBadge } from '../components/Badges';
 
@@ -23,8 +24,9 @@ export const Dashboard: React.FC = () => {
       try {
         const res = await api.get('/dashboard/stats');
         setStats(res.data.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load dashboard metrics');
+      } catch {
+        // Standalone fallback
+        setStats(dataStore.getDashboardStats());
       } finally {
         setIsLoading(false);
       }

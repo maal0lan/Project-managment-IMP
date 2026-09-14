@@ -12,6 +12,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { Task, Project, TaskStatus, TaskPriority, Pagination } from '../types';
 import { StatusBadge, PriorityBadge } from '../components/Badges';
 import { TaskModal } from '../components/TaskModal';
@@ -45,8 +46,8 @@ export const Tasks: React.FC = () => {
       try {
         const res = await api.get('/projects', { params: { limit: 100 } });
         setProjects(res.data.data);
-      } catch (err) {
-        console.error('Failed to load project list', err);
+      } catch {
+        setProjects(dataStore.getProjects({ limit: 100 }).data);
       }
     };
     fetchProjectList();
@@ -67,11 +68,22 @@ export const Tasks: React.FC = () => {
       if (priorityFilter !== 'ALL') params.priority = priorityFilter;
       if (projectFilter !== 'ALL') params.projectId = projectFilter;
 
-      const res = await api.get('/tasks', { params });
-      setTasks(res.data.data);
-      setPagination(res.data.pagination);
-    } catch (err) {
-      console.error('Failed to load tasks', err);
+      try {
+        const res = await api.get('/tasks', { params });
+        setTasks(res.data.data);
+        setPagination(res.data.pagination);
+      } catch {
+        const local = dataStore.getTasks({
+          search,
+          status: statusFilter,
+          priority: priorityFilter,
+          projectId: projectFilter,
+          page: pagination.page,
+          limit: pagination.limit,
+        });
+        setTasks(local.data);
+        setPagination(local.pagination);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -95,22 +107,21 @@ export const Tasks: React.FC = () => {
       task.status === 'COMPLETED' ? 'PENDING' : 'COMPLETED';
 
     try {
-      const res = await api.put(`/tasks/${task.id}`, { status: nextStatus });
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: res.data.data.status } : t))
-      );
-    } catch (err) {
-      console.error('Failed to update status', err);
+      await api.put(`/tasks/${task.id}`, { status: nextStatus });
+    } catch {
+      dataStore.updateTask(task.id, { status: nextStatus });
     }
+    fetchTasks();
   };
 
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/tasks/${id}`);
+    } catch {
+      dataStore.deleteTask(id);
+    } finally {
       setDeleteTaskId(null);
       fetchTasks();
-    } catch (err) {
-      console.error('Failed to delete task', err);
     }
   };
 

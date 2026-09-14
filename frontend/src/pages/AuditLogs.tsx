@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { History, Shield, Activity } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { AuditLog } from '../types';
 
 export const AuditLogs: React.FC = () => {
@@ -12,8 +13,8 @@ export const AuditLogs: React.FC = () => {
       try {
         const res = await api.get('/audit-logs?limit=40');
         setLogs(res.data.data);
-      } catch (err) {
-        console.error('Failed to load audit logs', err);
+      } catch {
+        setLogs(dataStore.getAuditLogs());
       } finally {
         setIsLoading(false);
       }

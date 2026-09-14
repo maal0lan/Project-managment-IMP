@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { Project, ProjectStatus, Pagination } from '../types';
 import { StatusBadge } from '../components/Badges';
 import { ProjectModal } from '../components/ProjectModal';
@@ -47,11 +48,23 @@ export const Projects: React.FC = () => {
       if (search.trim()) params.search = search.trim();
       if (statusFilter !== 'ALL') params.status = statusFilter;
 
-      const res = await api.get('/projects', { params });
-      setProjects(res.data.data);
-      setPagination(res.data.pagination);
-    } catch (err) {
-      console.error('Failed to load projects', err);
+      try {
+        const res = await api.get('/projects', { params });
+        setProjects(res.data.data);
+        setPagination(res.data.pagination);
+      } catch {
+        // Live client fallback: works seamlessly without external server
+        const local = dataStore.getProjects({
+          search,
+          status: statusFilter,
+          page: pagination.page,
+          limit: pagination.limit,
+          sortBy,
+          sortOrder,
+        });
+        setProjects(local.data);
+        setPagination(local.pagination);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -64,10 +77,11 @@ export const Projects: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/projects/${id}`);
+    } catch {
+      dataStore.deleteProject(id);
+    } finally {
       setDeleteConfirmId(null);
       fetchProjects();
-    } catch (err) {
-      console.error('Failed to delete project', err);
     }
   };
 

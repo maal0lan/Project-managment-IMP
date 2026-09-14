@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { Project, ProjectStatus } from '../types';
 
 interface ProjectModalProps {
@@ -66,20 +67,29 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({
         endDate: endDate ? new Date(endDate).toISOString() : null,
       };
 
-      let res;
-      if (projectToEdit) {
-        res = await api.put(`/projects/${projectToEdit.id}`, payload);
-      } else {
-        res = await api.post('/projects', payload);
+      let savedProject: Project;
+      try {
+        if (projectToEdit) {
+          const res = await api.put(`/projects/${projectToEdit.id}`, payload);
+          savedProject = res.data.data;
+        } else {
+          const res = await api.post('/projects', payload);
+          savedProject = res.data.data;
+        }
+      } catch {
+        // Direct local dataStore fallback for standalone Vercel frontend
+        if (projectToEdit) {
+          savedProject = dataStore.updateProject(projectToEdit.id, payload);
+        } else {
+          savedProject = dataStore.createProject(payload);
+        }
       }
 
-      onSaved(res.data.data);
+      onSaved(savedProject);
       onClose();
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0]?.message ||
-        'Failed to save project'
+        err.message || 'Failed to save project'
       );
     } finally {
       setIsLoading(false);

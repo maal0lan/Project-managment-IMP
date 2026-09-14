@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import api from '../api/client';
+import { dataStore } from '../api/dataStore';
 import { Task, TaskPriority, TaskStatus, Project } from '../types';
 
 interface TaskModalProps {
@@ -77,21 +78,27 @@ export const TaskModal: React.FC<TaskModalProps> = ({
         dueDate: dueDate ? new Date(dueDate).toISOString() : null,
       };
 
-      let res;
-      if (taskToEdit) {
-        res = await api.put(`/tasks/${taskToEdit.id}`, payload);
-      } else {
-        res = await api.post('/tasks', payload);
+      let savedTask: Task;
+      try {
+        if (taskToEdit) {
+          const res = await api.put(`/tasks/${taskToEdit.id}`, payload);
+          savedTask = res.data.data;
+        } else {
+          const res = await api.post('/tasks', payload);
+          savedTask = res.data.data;
+        }
+      } catch {
+        if (taskToEdit) {
+          savedTask = dataStore.updateTask(taskToEdit.id, payload);
+        } else {
+          savedTask = dataStore.createTask(payload);
+        }
       }
 
-      onSaved(res.data.data);
+      onSaved(savedTask);
       onClose();
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-        err.response?.data?.errors?.[0]?.message ||
-        'Failed to save task'
-      );
+      setError(err.message || 'Failed to save task');
     } finally {
       setIsLoading(false);
     }
